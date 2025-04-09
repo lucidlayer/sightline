@@ -36,4 +36,5 @@ Thumbs.db
 logs/
 *.log
 
-
+# Ignore VSCode extension packages
+src/sightline-extension-0.1.0.vsix
