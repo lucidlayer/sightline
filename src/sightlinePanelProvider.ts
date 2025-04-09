@@ -57,21 +57,25 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
       <head>
         <meta charset="UTF-8" />
         <style>
-          body { font-family: sans-serif; padding: 10px; }
-          button { margin: 5px 0; width: 100%; }
+          body { font-family: sans-serif; padding: 10px; color: var(--vscode-foreground); background-color: var(--vscode-editor-background); }
+          button { margin: 5px 0; width: 100%; background-color: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 5px; border-radius: 3px; }
+          button:hover { background-color: var(--vscode-button-hoverBackground); cursor: pointer; }
           #snapshots { margin-top: 10px; }
-          .snapshot { border: 1px solid #ccc; padding: 5px; margin-bottom: 5px; }
+          .snapshot { border: 1px solid var(--vscode-editorWidget-border); padding: 5px; margin-bottom: 5px; border-radius: 3px; background-color: var(--vscode-editorWidget-background); }
           .actions button { width: auto; margin-right: 5px; }
-          #ai-section { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; }
-          .suggestion { border: 1px dashed #888; padding: 5px; margin-bottom: 5px; }
-          #status { margin-top: 10px; font-size: 0.9em; color: #888; }
-          #loading { display: none; margin-top: 10px; font-size: 0.9em; color: #007acc; }
+          #ai-section { margin-top: 20px; border-top: 1px solid var(--vscode-editorWidget-border); padding-top: 10px; }
+          .suggestion { border: 1px dashed var(--vscode-editorWidget-border); padding: 5px; margin-bottom: 5px; border-radius: 3px; background-color: var(--vscode-editorWidget-background); }
+          #status { margin-top: 10px; font-size: 0.9em; color: var(--vscode-descriptionForeground); }
+          #loading { display: none; margin-top: 10px; font-size: 0.9em; color: var(--vscode-progressBar-background); }
         </style>
       </head>
       <body>
         <h2>Sightline Snapshots</h2>
-        <button onclick="vscode.postMessage({ command: 'captureSnapshot' })">Capture Snapshot</button>
-        <button onclick="vscode.postMessage({ command: 'refreshSnapshots' })">Refresh Snapshots</button>
+        <button title="Capture a new snapshot" onclick="vscode.postMessage({ command: 'captureSnapshot' })">📸 Capture Snapshot</button>
+        <button title="Refresh snapshot list" onclick="vscode.postMessage({ command: 'refreshSnapshots' })">🔄 Refresh Snapshots</button>
+
+        <input id="searchInput" placeholder="Filter by label, tags, or status..." style="width:100%;margin-top:5px;padding:4px;" oninput="filterSnapshots()" />
+
         <div id="snapshots">
           <!-- Snapshots will be dynamically inserted here -->
         </div>
@@ -94,22 +98,8 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
             if (message.type === 'loading') {
               document.getElementById('loading').style.display = message.show ? 'block' : 'none';
             } else if (message.type === 'snapshotList') {
-              const container = document.getElementById('snapshots');
-              container.innerHTML = '';
-              message.snapshots.forEach(snap => {
-                const div = document.createElement('div');
-                div.className = 'snapshot';
-                div.innerHTML = \`
-                  <strong>\${snap.label || 'Snapshot #' + snap.id}</strong><br/>
-                  Status: \${snap.archived ? 'Archived' : 'Active'}<br/>
-                  <div class="actions">
-                    <button onclick="vscode.postMessage({ command: 'validateSnapshot', snapshotId: \${snap.id} })">Validate</button>
-                    <button onclick="vscode.postMessage({ command: 'archiveSnapshot', snapshotId: \${snap.id} })">\${snap.archived ? 'Unarchive' : 'Archive'}</button>
-                    <button onclick="vscode.postMessage({ command: 'deleteSnapshot', snapshotId: \${snap.id} })">Delete</button>
-                  </div>
-                \`;
-                container.appendChild(div);
-              });
+              window.snapshotData = message.snapshots;
+              renderSnapshots(message.snapshots);
             } else if (message.type === 'aiSuggestions') {
               const container = document.getElementById('suggestions');
               container.innerHTML = '';
@@ -127,6 +117,35 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
               document.getElementById('status').innerText = message.text;
             }
           });
+
+          function renderSnapshots(snapshots) {
+            const container = document.getElementById('snapshots');
+            container.innerHTML = '';
+            snapshots.forEach(snap => {
+              const div = document.createElement('div');
+              div.className = 'snapshot';
+              div.innerHTML = \`
+                <strong>\${snap.label || 'Snapshot #' + snap.id}</strong><br/>
+                Status: \${snap.archived ? 'Archived' : 'Active'}<br/>
+                <div class="actions">
+                  <button title="Validate snapshot" onclick="vscode.postMessage({ command: 'validateSnapshot', snapshotId: \${snap.id} })">✅</button>
+                  <button title="\${snap.archived ? 'Unarchive' : 'Archive'} snapshot" onclick="vscode.postMessage({ command: 'archiveSnapshot', snapshotId: \${snap.id} })">\${snap.archived ? '📂' : '🗄️'}</button>
+                  <button title="Delete snapshot" onclick="vscode.postMessage({ command: 'deleteSnapshot', snapshotId: \${snap.id} })">🗑️</button>
+                </div>
+              \`;
+              container.appendChild(div);
+            });
+          }
+
+          function filterSnapshots() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = (window.snapshotData || []).filter(snap => {
+              return (snap.label && snap.label.toLowerCase().includes(query)) ||
+                     (snap.tags && snap.tags.toLowerCase().includes(query)) ||
+                     (snap.archived ? 'archived' : 'active').includes(query);
+            });
+            renderSnapshots(filtered);
+          }
         </script>
       </body>
       </html>
