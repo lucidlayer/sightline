@@ -38,3 +38,4 @@ logs/
 
 # Ignore VSCode extension packages
 src/sightline-extension-0.1.0.vsix
+src/sightline-extension-0.1.2.vsix
