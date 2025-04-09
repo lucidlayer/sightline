@@ -1,0 +1,33 @@
+{
+  "name": "sightline-server",
+  "version": "0.1.0",
+  "description": "Sightline MCP server providing snapshot, validation, and diff tools for visual regression testing",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "sightline-server": "./build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "0.6.0",
+    "eslint": "^9.24.0",
+    "pixelmatch": "^7.1.0",
+    "prettier": "^3.5.3",
+    "puppeteer": "^24.6.1",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.30",
+    "@types/pngjs": "^6.0.5",
+    "typescript": "^5.3.3"
+  }
+}

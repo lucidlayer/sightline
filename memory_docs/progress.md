@@ -13,16 +13,21 @@
   - `systemPatterns.md`
   - `techContext.md`
 
-### In Progress
-- Complete Memory Bank setup
-- Scaffold index YAML files
-- Prepare for MCP server bootstrap
+### Completed (continued)
+- Bootstrapped MCP server project
+- Installed all dependencies
+- Designed and created SQLite schema (snapshots, validations, diffs)
+- Implemented `take_snapshot`, `validate_snapshot`, `compare_snapshots` tools
+- Integrated Puppeteer, Pixelmatch, SQLite
+- Added error handling and input validation
+- Fixed all TypeScript errors and warnings
 
 ### Next Steps
-- Create `codeMap_root.md` with project structure and flow diagrams
-- Initialize empty indexes for components, services, utils, models
-- Plan MCP server creation commands
-- Document initial architecture in Memory Bank
+- Update Memory Bank docs with MCP server architecture and schemas
+- Begin Phase 3: SQLite data management improvements
+- Develop VSCode extension UI (Phase 4)
+- Integrate Cline AI workflows (Phase 5)
+- Testing, validation, and documentation updates
 
 ---
 

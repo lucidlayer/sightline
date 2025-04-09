@@ -1,0 +1,259 @@
+#!/usr/bin/env node
+
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+
+import sqlite3 from "sqlite3";
+import { open, Database } from "sqlite";
+import puppeteer from "puppeteer";
+import pixelmatch from "pixelmatch";
+import { PNG } from "pngjs";
+import fs from "fs";
+import path from "path";
+
+let db: Database<sqlite3.Database, sqlite3.Statement>;
+
+/**
+ * Initialize SQLite database with required tables.
+ */
+async function initDatabase() {
+  db = await open({
+    filename: path.join(process.cwd(), "sightline.sqlite"),
+    driver: sqlite3.Database,
+  });
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      image BLOB,
+      dom TEXT,
+      metadata TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS validations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      snapshot_id INTEGER,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      result TEXT,
+      FOREIGN KEY(snapshot_id) REFERENCES snapshots(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS diffs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      snapshot_id_a INTEGER,
+      snapshot_id_b INTEGER,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      diff_image BLOB,
+      score REAL,
+      FOREIGN KEY(snapshot_id_a) REFERENCES snapshots(id),
+      FOREIGN KEY(snapshot_id_b) REFERENCES snapshots(id)
+    );
+  `);
+}
+
+/**
+ * Create the MCP server instance.
+ */
+const server = new Server(
+  {
+    name: "sightline-server",
+    version: "0.1.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+/**
+ * List available tools: take_snapshot, validate_snapshot, compare_snapshots.
+ */
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "take_snapshot",
+        description: "Capture a UI snapshot with Puppeteer",
+        inputSchema: {
+          type: "object",
+          properties: {
+            url: { type: "string", description: "URL to capture" },
+          },
+          required: ["url"],
+        },
+      },
+      {
+        name: "validate_snapshot",
+        description: "Validate a snapshot's DOM with simple checks",
+        inputSchema: {
+          type: "object",
+          properties: {
+            snapshot_id: { type: "number", description: "Snapshot ID" },
+            selector: { type: "string", description: "CSS selector to check" },
+            text: { type: "string", description: "Expected text content" },
+          },
+          required: ["snapshot_id", "selector", "text"],
+        },
+      },
+      {
+        name: "compare_snapshots",
+        description: "Compare two snapshots and generate a diff",
+        inputSchema: {
+          type: "object",
+          properties: {
+            snapshot_id_a: { type: "number", description: "First snapshot ID" },
+            snapshot_id_b: { type: "number", description: "Second snapshot ID" },
+          },
+          required: ["snapshot_id_a", "snapshot_id_b"],
+        },
+      },
+    ],
+  };
+});
+
+/**
+ * Handle tool calls.
+ */
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name } = request.params;
+  const args = request.params.arguments ?? {};
+
+  switch (name) {
+    case "take_snapshot": {
+      const url = String(args.url);
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+      await page.goto(url, { waitUntil: "networkidle2" });
+
+      const dom = await page.content();
+      const screenshotBuffer = await page.screenshot({ fullPage: true });
+
+      await browser.close();
+
+      const result = await db.run(
+        "INSERT INTO snapshots (image, dom, metadata) VALUES (?, ?, ?)",
+        screenshotBuffer,
+        dom,
+        JSON.stringify({ url })
+      );
+      const id = result.lastID;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ snapshot_id: id }),
+          },
+        ],
+      };
+    }
+
+    case "validate_snapshot": {
+      const snapshot_id = Number(args.snapshot_id);
+      const selector = String(args.selector);
+      const expectedText = String(args.text);
+
+      const row = await db.get(
+        "SELECT dom FROM snapshots WHERE id = ?",
+        snapshot_id
+      );
+      if (!row) throw new Error("Snapshot not found");
+
+      const dom = row.dom;
+      const found = dom.includes(selector) && dom.includes(expectedText);
+
+      const resultObj = {
+        selector,
+        expectedText,
+        found,
+      };
+
+      await db.run(
+        "INSERT INTO validations (snapshot_id, result) VALUES (?, ?)",
+        snapshot_id,
+        JSON.stringify(resultObj)
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(resultObj),
+          },
+        ],
+      };
+    }
+
+    case "compare_snapshots": {
+      const idA = Number(args.snapshot_id_a);
+      const idB = Number(args.snapshot_id_b);
+
+      const rowA = await db.get(
+        "SELECT image FROM snapshots WHERE id = ?",
+        idA
+      );
+      const rowB = await db.get(
+        "SELECT image FROM snapshots WHERE id = ?",
+        idB
+      );
+      if (!rowA || !rowB) throw new Error("Snapshots not found");
+
+      const imgA = PNG.sync.read(rowA.image);
+      const imgB = PNG.sync.read(rowB.image);
+
+      const { width, height } = imgA;
+      const diff = new PNG({ width, height });
+
+      const score = pixelmatch(
+        imgA.data,
+        imgB.data,
+        diff.data,
+        width,
+        height,
+        { threshold: 0.1 }
+      );
+
+      const diffBuffer = PNG.sync.write(diff);
+
+      await db.run(
+        "INSERT INTO diffs (snapshot_id_a, snapshot_id_b, diff_image, score) VALUES (?, ?, ?, ?)",
+        idA,
+        idB,
+        diffBuffer,
+        score
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ score }),
+          },
+        ],
+      };
+    }
+
+    default:
+      throw new Error(`Unknown tool: ${name}`);
+  }
+});
+
+/**
+ * Start the server after initializing the database.
+ */
+async function main() {
+  await initDatabase();
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+main().catch((err) => {
+  console.error("Sightline MCP server error:", err);
+  process.exit(1);
+});
