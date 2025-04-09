@@ -10,7 +10,7 @@
     "url": "https://github.com/lucidlayer/sightline.git"
   },
   "engines": {
-    "vscode": "^1.99.0"
+    "vscode": "^1.98.0"
   },
   "categories": [
     "Other"
