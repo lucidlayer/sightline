@@ -14,6 +14,7 @@ timestamp: 2025-04-09T10:40:42-05:00
 ## PROJECT_STRUCTURE
 sightline/
 ├── .clinerules
+├── .gitignore
 ├── README.md
 ├── LICENSE
 ├── memory_docs/
@@ -28,8 +29,17 @@ sightline/
 │       ├── services_index.yaml
 │       ├── utils_index.yaml
 │       └── models_index.yaml
+├── mcp/
+│   └── sightline-server/
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── src/
+│       │   └── index.ts
+│       ├── build/
+│       ├── node_modules/ (ignored)
+│       └── other MCP server files
 └── src/
-    └── (MCP server, extension code to be added)
+    └── (VSCode extension code to be added)
 
 ---
 

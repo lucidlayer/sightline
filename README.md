@@ -17,27 +17,37 @@ Sightline is a Visual Regression Testing system integrated with VSCode, an AI ag
   - `progress.md`
   - `codeMap_root.md`
   - Indexes for components, services, utils, models
-- Scaffolded empty `src/` directory for future code
+- Scaffolded empty `src/` directory for future extension code
 - Added `.gitignore` to exclude build artifacts, dependencies, and sensitive files
+
+### Phase 2: MCP Server Development **(Completed)**
+- Bootstrapped MCP server **inside repo** at `mcp/sightline-server`
+- Installed all dependencies (`puppeteer`, `pixelmatch`, `sqlite3`, etc.)
+- Designed and created SQLite schema (snapshots, validations, diffs)
+- Implemented tools:
+  - `take_snapshot`
+  - `validate_snapshot`
+  - `compare_snapshots`
+- Integrated Puppeteer, Pixelmatch, SQLite
+- Added error handling and input validation
+- Fixed all TypeScript errors and warnings
+- Updated `.gitignore` files for nested project
+- Updated Memory Bank with current architecture and progress
 
 ---
 
 ## Next Steps
 
-### Phase 2: MCP Server Development
-- Bootstrap MCP server with `npx @modelcontextprotocol/create-server`
-- Implement tools:
-  - `take_snapshot`
-  - `validate_snapshot`
-  - `compare_snapshots`
-- Integrate SQLite database
-- Add error handling and logging
-- Test each tool individually
+### Phase 3: Data Management & Extension
+- Improve SQLite data management
+- Scaffold VSCode extension UI
+- Integrate Cline AI workflows
+- End-to-end testing and documentation updates
 
 ### Future Phases
-- Develop VSCode extension UI
-- Integrate Cline AI agent workflows
-- End-to-end testing and documentation
+- Advanced validation rules
+- Cloud storage or remote execution
+- User management or auth flows
 
 ---
 
@@ -49,7 +59,16 @@ Sightline is a Visual Regression Testing system integrated with VSCode, an AI ag
   ├── .gitignore
   ├── README.md
   ├── LICENSE
-  ├── src/                  # MCP server and extension code
+  ├── mcp/
+  │   └── sightline-server/
+  │       ├── package.json
+  │       ├── tsconfig.json
+  │       ├── src/
+  │       │   └── index.ts
+  │       ├── build/
+  │       ├── node_modules/ (ignored)
+  │       └── other MCP server files
+  ├── src/                  # VSCode extension code (to be added)
   └── memory_docs/          # Memory Bank documentation
       ├── projectbrief.md
       ├── activeContext.md
@@ -71,3 +90,4 @@ Sightline is a Visual Regression Testing system integrated with VSCode, an AI ag
 - Explicit approval is enforced for all destructive actions.
 - Sightline MCP tools are preferred for snapshot, validation, and diff.
 - Memory Bank files are loaded at startup to maintain persistent context.
+- MCP server is now **inside the repo** under `mcp/sightline-server`.

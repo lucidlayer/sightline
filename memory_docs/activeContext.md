@@ -1,23 +1,26 @@
 # Active Context: Sightline
 
 ## Current Phase
-**Phase 1: Project Bootstrapping**
+**Transitioning from Phase 2 (MCP Server) to Phase 3 (Data management & Extension)**
 
 ## Focus Areas
-- Enforce explicit tool invocation policies
-- Initialize Memory Bank documentation
-- Prepare directory structure for MCP server and extension
-- Set up initial `.clinerules` with strict policies
-- Lay groundwork for MCP server development in Phase 2
+- MCP server fully implemented and moved inside main repo
+- Dependencies installed and TypeScript errors resolved
+- `.gitignore` files reviewed and updated
+- Memory Bank partially updated
+- Prepare for:
+  - SQLite data management improvements (Phase 3)
+  - VSCode extension UI scaffolding (Phase 4)
+  - Cline AI integration (Phase 5)
 
 ## Immediate Next Steps
-- Complete Memory Bank file creation
-- Scaffold indexes for components, services, utils, models
-- Review and update `.clinerules` as needed
-- Plan MCP server bootstrap commands
+- Update Memory Bank docs with MCP server architecture and schemas
+- Commit and push unified repo to GitHub
+- Plan Phase 3 implementation details
+- Begin scaffolding VSCode extension
 
 ## Known Issues / Questions
-- None at this stage
+- None outstanding
 
 ## Blockers
 - None identified
