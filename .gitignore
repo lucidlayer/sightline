@@ -12,6 +12,7 @@ out/
 *.js.map
 *.js
 *.tsbuildinfo
+src/out/extension.js
 
 # OS files
 .DS_Store
