@@ -19,7 +19,8 @@
   "main": "./out/extension.js",
   "activationEvents": [
     "onCommand:sightline.openPanel",
-    "onView:sightlinePanel"
+    "onView:sightlinePanel",
+    "onView:sightline"
   ],
   "contributes": {
     "viewsContainers": {
