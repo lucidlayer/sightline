@@ -16,9 +16,18 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.options = {
       enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.context.extensionUri, 'images')
+      ]
     };
 
     webviewView.webview.html = this.getHtml();
+
+    // Update the panel title with server connection status
+    webviewView.description = "Checking MCP server...";
+    this.checkMCPServerConnection().then(isConnected => {
+      webviewView.description = isConnected ? "Connected" : "Not connected";
+    });
 
     webviewView.webview.onDidReceiveMessage((message) => {
       switch (message.command) {
@@ -50,6 +59,22 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  private async checkMCPServerConnection(): Promise<boolean> {
+    try {
+      const cp = require('child_process');
+      const path = require('path');
+      const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
+      
+      return new Promise<boolean>((resolve) => {
+        cp.exec(`node "${cliPath}" list-snapshots --json`, (err: any) => {
+          resolve(!err);
+        });
+      });
+    } catch {
+      return false;
+    }
+  }
+
   private getHtml(): string {
     return `
       <!DOCTYPE html>
@@ -57,9 +82,41 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
       <head>
         <meta charset="UTF-8" />
         <style>
-          body { font-family: sans-serif; padding: 10px; color: var(--vscode-foreground); background-color: var(--vscode-editor-background); }
-          button { margin: 5px 0; width: 100%; background-color: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 5px; border-radius: 3px; }
-          button:hover { background-color: var(--vscode-button-hoverBackground); cursor: pointer; }
+          body { 
+            font-family: sans-serif; 
+            padding: 10px; 
+            color: var(--vscode-foreground); 
+            background-color: var(--vscode-editor-background); 
+          }
+          button { 
+            margin: 5px 0; 
+            width: 100%; 
+            background-color: var(--vscode-button-background); 
+            color: var(--vscode-button-foreground); 
+            border: none; 
+            padding: 5px; 
+            border-radius: 3px; 
+          }
+          button:hover { 
+            background-color: var(--vscode-button-hoverBackground); 
+            cursor: pointer; 
+          }
+          .status-info {
+            font-style: italic;
+            margin: 10px 0;
+            padding: 5px;
+            background-color: var(--vscode-editorInfo-background);
+            border: 1px solid var(--vscode-editorInfo-border);
+            border-radius: 3px;
+          }
+          .status-warning {
+            font-style: italic;
+            margin: 10px 0;
+            padding: 5px;
+            background-color: var(--vscode-editorWarning-background);
+            border: 1px solid var(--vscode-editorWarning-border);
+            border-radius: 3px;
+          }
           #snapshots { margin-top: 10px; }
           .snapshot { border: 1px solid var(--vscode-editorWidget-border); padding: 5px; margin-bottom: 5px; border-radius: 3px; background-color: var(--vscode-editorWidget-background); }
           .actions button { width: auto; margin-right: 5px; }
@@ -71,6 +128,7 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
       </head>
       <body>
         <h2>Sightline Snapshots</h2>
+        <div id="server-status"></div>
         <button title="Capture a new snapshot" onclick="vscode.postMessage({ command: 'captureSnapshot' })">📸 Capture Snapshot</button>
         <button title="Refresh snapshot list" onclick="vscode.postMessage({ command: 'refreshSnapshots' })">🔄 Refresh Snapshots</button>
 
@@ -100,6 +158,8 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
             } else if (message.type === 'snapshotList') {
               window.snapshotData = message.snapshots;
               renderSnapshots(message.snapshots);
+              // Hide server status message if we got data
+              document.getElementById('server-status').style.display = 'none';
             } else if (message.type === 'aiSuggestions') {
               const container = document.getElementById('suggestions');
               container.innerHTML = '';
@@ -115,8 +175,18 @@ export class SightlinePanelProvider implements vscode.WebviewViewProvider {
               });
             } else if (message.type === 'status') {
               document.getElementById('status').innerText = message.text;
+              if (message.text.includes('Error') || message.text.includes('error')) {
+                const statusDiv = document.getElementById('server-status');
+                statusDiv.className = 'status-warning';
+                statusDiv.innerHTML = 'MCP Server connection error. Please start the server:<br><code>cd mcp/sightline-server && npm run build && node build/index.js</code>';
+                statusDiv.style.display = 'block';
+              }
             }
           });
+
+          // Show initial message about server
+          document.getElementById('server-status').className = 'status-info';
+          document.getElementById('server-status').innerHTML = 'Connecting to MCP server...';
 
           function renderSnapshots(snapshots) {
             const container = document.getElementById('snapshots');

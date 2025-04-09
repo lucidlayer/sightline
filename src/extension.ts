@@ -2,6 +2,14 @@ import * as vscode from 'vscode';
 import { SightlinePanelProvider } from './sightlinePanelProvider';
 
 export function activate(context: vscode.ExtensionContext) {
+  // Create the sidebar provider instance first
+  const sidebarProvider = new SightlinePanelProvider(context);
+  
+  // Register the WebviewViewProvider with the correct view ID
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider('sightlinePanel', sidebarProvider)
+  );
+
   const disposable = vscode.commands.registerCommand('sightline.openPanel', () => {
     const panel = vscode.window.createWebviewPanel(
       'sightlinePanel',
@@ -100,20 +108,41 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(disposable);
 
-  const sidebarProvider = new SightlinePanelProvider(context);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider('sightlinePanel', sidebarProvider)
-  );
-
-  setTimeout(() => {
-    fetchAndSendSnapshots(sidebarProvider);
-    fetchAndSendAISuggestions(sidebarProvider);
-  }, 1000);
+  // Check MCP server connection on startup and show status
+  checkMCPServerConnection().then(isConnected => {
+    if (isConnected) {
+      vscode.window.showInformationMessage('Sightline: Connected to MCP server');
+      // Fetch data after confirming connection
+      setTimeout(() => {
+        fetchAndSendSnapshots(sidebarProvider);
+        fetchAndSendAISuggestions(sidebarProvider);
+      }, 1000);
+    } else {
+      vscode.window.showWarningMessage('Sightline: MCP server not connected. Start the server to enable full functionality.');
+    }
+  });
 
   vscode.commands.registerCommand('sightline.refreshSnapshots', () => {
     fetchAndSendSnapshots(sidebarProvider);
     fetchAndSendAISuggestions(sidebarProvider);
   });
+}
+
+// Add a function to check MCP server connection
+async function checkMCPServerConnection(): Promise<boolean> {
+  try {
+    const cp = require('child_process');
+    const path = require('path');
+    const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
+    
+    return new Promise<boolean>((resolve) => {
+      cp.exec(`node "${cliPath}" list-snapshots --json`, (err: any) => {
+        resolve(!err);
+      });
+    });
+  } catch {
+    return false;
+  }
 }
 
 function fetchAndSendSnapshots(provider: SightlinePanelProvider) {

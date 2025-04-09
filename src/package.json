@@ -20,7 +20,7 @@
   "activationEvents": [
     "onCommand:sightline.openPanel",
     "onView:sightlinePanel",
-    "onView:sightline"
+    "*"
   ],
   "contributes": {
     "viewsContainers": {
@@ -37,7 +37,7 @@
         {
           "id": "sightlinePanel",
           "name": "Sightline Panel",
-          "icon": "images/icon.png"
+          "type": "webview"
         }
       ]
     },
