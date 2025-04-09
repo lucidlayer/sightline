@@ -8,3 +8,6 @@ attention_anchors:
   - "Never bypass explicit approval for destructive actions."
   - "Memory Bank files must be loaded at startup."
   - "Strictly follow project documentation and policies."
+  - "Use Sightline CLI for snapshot management."
+  - "Bias toward explicit tool invocation."
+  - "Embed constraint stuffing, confidence checks, and memory checks in prompts."

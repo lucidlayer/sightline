@@ -1,22 +1,35 @@
 # Active Context: Sightline
 
 ## Current Phase
-**Phase 4 (VSCode Extension) — Completed**
+**Phase 5 (Cline AI Integration & Prompt Engineering) — In Progress**
 
 ## Focus Areas
-- Fully functional VSCode extension with:
-  - Snapshot gallery with filtering
-  - Validation panel with multi-rule support
-  - Diff viewer with adjustable threshold
-  - Snapshot management (archive, unarchive, delete)
-  - CLI integration for all actions
-- Preparing for:
-  - **Phase 5: Cline AI integration and prompt engineering**
+- Update global custom instructions to enforce Sightline tool use
+- Refine `.clinerules` with project-specific policies (done)
+- Embed constraint stuffing, confidence checks, memory checks in prompts
+- Design prompt templates for:
+  - Tool invocation
+  - Chained tool calls
+  - Error handling
+- Test Cline's behavior for:
+  - Suggesting correct tools
+  - Requesting explicit approval
+  - Chaining tools when needed
+  - Loading Memory Bank context
+- Update Memory Bank and README with new prompts and workflows
 
 ## Immediate Next Steps
-- Update Memory Bank docs (in progress)
-- Commit and push unified repo to GitHub
-- Begin Phase 5 planning and implementation
+- **Design and document prompt templates:**
+  - Tool invocation prompts
+  - Chained tool call prompts
+  - Error handling prompts
+- **Test Cline's behavior:**
+  - Simulate workflows (capture, validate, diff, manage)
+  - Confirm explicit approval and chaining
+  - Refine prompts based on results
+- **Update documentation:**
+  - Add prompt templates to Memory Bank
+  - Update README with AI integration examples
 
 ## Known Issues / Questions
 - None outstanding

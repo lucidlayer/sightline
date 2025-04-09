@@ -23,13 +23,13 @@
 - Added communication layer and error handling
 - Status: **Completed**
 
-## Next Phase: Phase 5 - Cline AI Integration
-- Update prompts to enforce Sightline tool use
-- Refine `.clinerules` with project-specific policies
-- Embed constraint stuffing, confidence checks, memory checks
-- Test Cline's behavior for tool invocation and chaining
-- Status: **Upcoming**
+## Phase 5: Cline AI Integration & Prompt Engineering
+- Updated `.clinerules` with explicit approval, constraint stuffing, confidence checks, memory checks
+- Updated global instructions to enforce Sightline tool use
+- Designed prompt templates for tool invocation, chaining, error handling
+- Updated Memory Bank with prompt engineering patterns
+- Status: **In Progress**
 
 ## Notes
 - All critical features for Phases 1-4 are implemented and documented
-- Preparing to transition to Phase 5
+- Phase 5 prompt engineering is underway

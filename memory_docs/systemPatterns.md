@@ -64,6 +64,47 @@
 - Archive, unarchive, delete snapshots
 - Built with commander.js
 
+## Cline AI Prompt Engineering (Phase 5)
+- **Global Instructions:**
+  - Enforce explicit approval and Sightline tool use
+  - Bias toward explicit tool invocation
+  - Embed constraint stuffing, confidence checks, memory checks
+
+- **Prompt Templates:**
+
+  **Tool Invocation Prompt Example:**
+  ```
+  Use the Sightline MCP tool `take_snapshot` with URL "https://example.com".
+  Request explicit approval before executing.
+  ```
+
+  **Chained Tool Calls Prompt Example:**
+  ```
+  First, capture a snapshot of "https://example.com".
+  Then, validate the snapshot with rules:
+    - selector: "#header", text: "Welcome"
+    - selector: ".btn", text: "Submit"
+  Then, compare the new snapshot with snapshot ID 42.
+  Request explicit approval before each step.
+  ```
+
+  **Error Handling Prompt Example:**
+  ```
+  If an error occurs during validation, retry once.
+  If still failing, request clarification or alternative input.
+  Log errors and suggest next actions.
+  ```
+
+- **Behavior Testing:**
+  - Confirm Cline suggests correct tools
+  - Requests explicit approval
+  - Chains tools when needed
+  - Loads Memory Bank context
+
+- **Refinement:**
+  - Iteratively improve prompts based on test results
+  - Update Memory Bank and README accordingly
+
 ## Error Handling
 - Comprehensive try/catch in MCP tools and extension backend
 - Log errors to console and SQLite
