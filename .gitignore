@@ -8,6 +8,9 @@ yarn-error.log
 dist/
 build/
 src/out/
+src/out/**
+src/extension.js
+src/package-lock.json
 out/
 *.js.map
 *.js
@@ -32,3 +35,5 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+

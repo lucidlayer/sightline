@@ -3,7 +3,12 @@
   "displayName": "Sightline",
   "description": "VSCode extension for Sightline visual regression testing",
   "version": "0.1.0",
-  "publisher": "your-name-or-org",
+  "publisher": "lucidlayer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lucidlayer/sightline.git"
+  },
   "engines": {
     "vscode": "^1.99.0"
   },
