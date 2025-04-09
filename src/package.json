@@ -2,7 +2,7 @@
   "name": "sightline-extension",
   "displayName": "Sightline",
   "description": "VSCode extension for Sightline visual regression testing",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "lucidlayer",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -16,11 +16,26 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:sightline.openPanel"
-  ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sightline",
+          "title": "Sightline",
+          "icon": "images/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "sightline": [
+        {
+          "id": "sightlinePanel",
+          "name": "Sightline Panel",
+          "icon": "images/icon.png"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "sightline.openPanel",

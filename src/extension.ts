@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { SightlinePanelProvider } from './sightlinePanelProvider';
 
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand('sightline.openPanel', () => {
@@ -16,6 +17,29 @@ export function activate(context: vscode.ExtensionContext) {
 
     panel.webview.onDidReceiveMessage(async (message) => {
       switch (message.type) {
+        case 'approveAI':
+          vscode.window.showInformationMessage(`Approved AI suggestion: ${message.suggestionId}`);
+          // Parse suggestionId format: e.g., "validate:123", "diff:123:100", "archive:99"
+          const parts = message.suggestionId.split(':');
+          const action = parts[0];
+          if (action === 'validate') {
+            const snapId = parts[1];
+            vscode.commands.executeCommand('sightline.validateSnapshot', snapId);
+          } else if (action === 'diff') {
+            const idA = parts[1];
+            const idB = parts[2];
+            vscode.commands.executeCommand('sightline.compareSnapshots', idA, idB);
+          } else if (action === 'archive') {
+            const snapId = parts[1];
+            vscode.commands.executeCommand('sightline.archiveSnapshot', snapId);
+          } else {
+            vscode.window.showWarningMessage(`Unknown AI suggestion action: ${action}`);
+          }
+          break;
+        case 'denyAI':
+          vscode.window.showInformationMessage(`Denied AI suggestion: ${message.suggestionId}`);
+          // Log denial, skip action
+          break;
         case 'runValidation':
           try {
             const cp = await import('child_process');
@@ -64,93 +88,68 @@ export function activate(context: vscode.ExtensionContext) {
           }
           break;
         case 'captureSnapshot':
-          // TODO: invoke CLI or MCP to capture snapshot
           vscode.window.showInformationMessage('Capture Snapshot triggered');
           break;
         case 'refreshSnapshots':
-          try {
-            const cp = await import('child_process');
-            const path = require('path');
-            const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
-            cp.exec(`node "${cliPath}" list-snapshots --json`, (err, stdout, stderr) => {
-              if (err) {
-                vscode.window.showErrorMessage('Error fetching snapshots: ' + stderr);
-                return;
-              }
-              try {
-                const snapshots = JSON.parse(stdout);
-                panel.webview.postMessage({
-                  type: 'snapshotList',
-                  snapshots
-                });
-              } catch (e) {
-                vscode.window.showErrorMessage('Invalid snapshot data');
-              }
-            });
-          } catch (e) {
-            const msg = (e instanceof Error) ? e.message : String(e);
-            vscode.window.showErrorMessage('Failed to run CLI: ' + msg);
-          }
-          break;
-        case 'toggleArchive':
-          try {
-            const cp = await import('child_process');
-            const path = require('path');
-            const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
-            // First, get current snapshot status
-            cp.exec(`node "${cliPath}" list-snapshots --json`, (err, stdout, stderr) => {
-              if (err) {
-                vscode.window.showErrorMessage('Error fetching snapshot: ' + stderr);
-                return;
-              }
-              try {
-                const snapshots = JSON.parse(stdout);
-                const snap = snapshots.find((s: any) => s.id == message.id);
-                if (!snap) {
-                  vscode.window.showErrorMessage('Snapshot not found');
-                  return;
-                }
-                const cmd = snap.archived
-                  ? `node "${cliPath}" unarchive-snapshot ${message.id}`
-                  : `node "${cliPath}" archive-snapshot ${message.id}`;
-                cp.exec(cmd, (err2, stdout2, stderr2) => {
-                  if (err2) {
-                    vscode.window.showErrorMessage('Error archiving snapshot: ' + stderr2);
-                    return;
-                  }
-                  vscode.commands.executeCommand('sightline.openPanel'); // Refresh panel
-                });
-              } catch (e) {
-                vscode.window.showErrorMessage('Invalid snapshot data');
-              }
-            });
-          } catch (e) {
-            const msg = (e instanceof Error) ? e.message : String(e);
-            vscode.window.showErrorMessage('Failed to run CLI: ' + msg);
-          }
-          break;
-        case 'deleteSnapshot':
-          try {
-            const cp = await import('child_process');
-            const path = require('path');
-            const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
-            cp.exec(`node "${cliPath}" delete-snapshot ${message.id}`, (err, stdout, stderr) => {
-              if (err) {
-                vscode.window.showErrorMessage('Error deleting snapshot: ' + stderr);
-                return;
-              }
-              vscode.commands.executeCommand('sightline.openPanel'); // Refresh panel
-            });
-          } catch (e) {
-            const msg = (e instanceof Error) ? e.message : String(e);
-            vscode.window.showErrorMessage('Failed to run CLI: ' + msg);
-          }
+          fetchAndSendSnapshots(sidebarProvider);
+          fetchAndSendAISuggestions(sidebarProvider);
           break;
       }
     });
   });
 
   context.subscriptions.push(disposable);
+
+  const sidebarProvider = new SightlinePanelProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider('sightlinePanel', sidebarProvider)
+  );
+
+  setTimeout(() => {
+    fetchAndSendSnapshots(sidebarProvider);
+    fetchAndSendAISuggestions(sidebarProvider);
+  }, 1000);
+
+  vscode.commands.registerCommand('sightline.refreshSnapshots', () => {
+    fetchAndSendSnapshots(sidebarProvider);
+    fetchAndSendAISuggestions(sidebarProvider);
+  });
+}
+
+function fetchAndSendSnapshots(provider: SightlinePanelProvider) {
+  const cp = require('child_process');
+  const path = require('path');
+  const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
+  cp.exec(`node "${cliPath}" list-snapshots --json`, (err: any, stdout: string, stderr: string) => {
+    if (err) {
+      provider.lastWebview?.webview.postMessage({ type: 'status', text: 'Error fetching snapshots' });
+      return;
+    }
+    try {
+      const snapshots = JSON.parse(stdout);
+      provider.lastWebview?.webview.postMessage({ type: 'snapshotList', snapshots });
+    } catch {
+      provider.lastWebview?.webview.postMessage({ type: 'status', text: 'Invalid snapshot data' });
+    }
+  });
+}
+
+function fetchAndSendAISuggestions(provider: SightlinePanelProvider) {
+  const cp = require('child_process');
+  const path = require('path');
+  const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
+  cp.exec(`node "${cliPath}" get-ai-suggestions --json`, (err: any, stdout: string, stderr: string) => {
+    if (err) {
+      provider.lastWebview?.webview.postMessage({ type: 'status', text: 'Error fetching AI suggestions' });
+      return;
+    }
+    try {
+      const suggestions = JSON.parse(stdout);
+      provider.lastWebview?.webview.postMessage({ type: 'aiSuggestions', suggestions });
+    } catch {
+      provider.lastWebview?.webview.postMessage({ type: 'status', text: 'Invalid AI suggestion data' });
+    }
+  });
 }
 
 export function deactivate() {}

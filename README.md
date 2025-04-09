@@ -1,5 +1,10 @@
 # Sightline
 
+[![VS Code Marketplace](https://vsmarketplacebadge.apphb.com/version-short/LucidLayer.sightline-extension.svg)](https://marketplace.visualstudio.com/items?itemName=LucidLayer.sightline-extension)
+[![Installs](https://vsmarketplacebadge.apphb.com/installs/LucidLayer.sightline-extension.svg)](https://marketplace.visualstudio.com/items?itemName=LucidLayer.sightline-extension)
+[![Rating](https://vsmarketplacebadge.apphb.com/rating-short/LucidLayer.sightline-extension.svg)](https://marketplace.visualstudio.com/items?itemName=LucidLayer.sightline-extension)
+
+
 Sightline is a Visual Regression Testing system integrated with VSCode, an AI agent (Cline), and a custom MCP server. It enables developers to capture, validate, and compare UI snapshots directly within their development workflow.
 
 ---
