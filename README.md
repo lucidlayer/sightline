@@ -1,50 +1,73 @@
-# sightline
--
-```mermaid
-flowchart TD
-    %% User Interaction Layer
-    User([User]) -->|Clicks button / types prompt| VSCodeExt[VS Code Extension UI]
-    VSCodeExt -->|Sends structured prompt| Cline[Cline AI Agent]
-    Cline -->|Suggests Sightline tool use\nRequests approval| User
-    User -->|Approves tool call| Cline
-    Cline -->|Calls MCP tool via use_mcp_tool| MCPServer
+# Sightline
 
-    %% MCP Server Layer
-    subgraph MCP_Server["Sightline MCP Server"]
-        MCPServer[MCP Server Controller]
-        MCPServer -->|take_snapshot| Puppeteer[Puppeteer Browser]
-        MCPServer -->|validate_snapshot| Validator[Validation Engine]
-        MCPServer -->|compare_snapshots| Pixelmatch[Pixelmatch Diff Engine]
-        Puppeteer -->|Snapshot Data| SQLiteDB[(SQLite DB)]
-        Validator -->|Validation Results| SQLiteDB
-        Pixelmatch -->|Diff Image + Score| SQLiteDB
-    end
+Sightline is a Visual Regression Testing system integrated with VSCode, an AI agent (Cline), and a custom MCP server. It enables developers to capture, validate, and compare UI snapshots directly within their development workflow.
 
-    %% Data Flow Back
-    SQLiteDB --> MCPServer
-    MCPServer --> Cline
-    Cline --> VSCodeExt
-    VSCodeExt -->|Displays| User
+---
 
-    %% Persistent Context Layer
-    subgraph MemoryBank["Memory Bank v2 + Context"]
-        MBFiles[Markdown Files:\nprojectbrief.md,\nactiveContext.md,\nsystemPatterns.md,\ncodeMap_root.md,\nindexes/*.yaml,\n.clinerules]
-        MBFiles -->|Loaded at start| Cline
-        MBFiles -->|Tool policies:\nAlways use Sightline tools| Cline
-    end
+## Current Status (as of 2025-04-09)
 
-    %% Annotations
-    classDef user fill:#cfc,stroke:#333,stroke-width:2px
-    classDef ext fill:#ccf,stroke:#333,stroke-width:2px
-    classDef cline fill:#fc9,stroke:#333,stroke-width:2px
-    classDef mcp fill:#ffc,stroke:#333,stroke-width:2px
-    classDef db fill:#f9f,stroke:#333,stroke-width:2px
-    classDef mem fill:#cff,stroke:#333,stroke-width:2px
-    class User user
-    class VSCodeExt ext
-    class Cline cline
-    class MCPServer mcp
-    class Puppeteer,Validator,Pixelmatch mcp
-    class SQLiteDB db
-    class MBFiles mem
+### Phase 1: Bootstrapping **(Completed)**
+- Initialized Git repository
+- Created `.clinerules` enforcing explicit approval and tool policies
+- Established **Memory Bank** with:
+  - `projectbrief.md`
+  - `activeContext.md`
+  - `systemPatterns.md`
+  - `techContext.md`
+  - `progress.md`
+  - `codeMap_root.md`
+  - Indexes for components, services, utils, models
+- Scaffolded empty `src/` directory for future code
+- Added `.gitignore` to exclude build artifacts, dependencies, and sensitive files
+
+---
+
+## Next Steps
+
+### Phase 2: MCP Server Development
+- Bootstrap MCP server with `npx @modelcontextprotocol/create-server`
+- Implement tools:
+  - `take_snapshot`
+  - `validate_snapshot`
+  - `compare_snapshots`
+- Integrate SQLite database
+- Add error handling and logging
+- Test each tool individually
+
+### Future Phases
+- Develop VSCode extension UI
+- Integrate Cline AI agent workflows
+- End-to-end testing and documentation
+
+---
+
+## Repository Structure
+
 ```
+/ (root)
+  ├── .clinerules
+  ├── .gitignore
+  ├── README.md
+  ├── LICENSE
+  ├── src/                  # MCP server and extension code
+  └── memory_docs/          # Memory Bank documentation
+      ├── projectbrief.md
+      ├── activeContext.md
+      ├── systemPatterns.md
+      ├── techContext.md
+      ├── progress.md
+      ├── codeMap_root.md
+      └── indexes/
+          ├── components_index.yaml
+          ├── services_index.yaml
+          ├── utils_index.yaml
+          └── models_index.yaml
+```
+
+---
+
+## Notes
+
+- Explicit approval is enforced for all destructive actions.
+- Sightline MCP tools are preferred for snapshot, validation, and diff.
+- Memory Bank files are loaded at startup to maintain persistent context.

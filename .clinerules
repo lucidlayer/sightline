@@ -1,0 +1,10 @@
+tool_policies:
+  enforce_explicit_approval: true
+  prefer_sightline_tools: true
+  restrict_shell_commands: true
+
+attention_anchors:
+  - "Always use Sightline MCP tools for snapshot, validation, and diff."
+  - "Never bypass explicit approval for destructive actions."
+  - "Memory Bank files must be loaded at startup."
+  - "Strictly follow project documentation and policies."
