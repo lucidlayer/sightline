@@ -184,3 +184,24 @@ node build/index.js   # Start MCP server
 ## License
 
 MIT
+
+
+
+
+
+
+
+
+---
+DEV:
+
+{
+  "mcpServers": {
+    "sightline": {
+      "command": "node",
+      "args": [
+        "c:/Dev/Projects/lucid-layer/sightline/mcp/sightline-server/build/index.js"
+      ]
+    }
+  }
+}
