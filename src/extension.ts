@@ -35,7 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
               });
             });
           } catch (e) {
-            vscode.window.showErrorMessage('Failed to run validation: ' + e.message);
+            const msg = (e instanceof Error) ? e.message : String(e);
+            vscode.window.showErrorMessage('Failed to run validation: ' + msg);
           }
           break;
         case 'runDiff':
@@ -58,7 +59,8 @@ export function activate(context: vscode.ExtensionContext) {
               });
             });
           } catch (e) {
-            vscode.window.showErrorMessage('Failed to run diff: ' + e.message);
+            const msg = (e instanceof Error) ? e.message : String(e);
+            vscode.window.showErrorMessage('Failed to run diff: ' + msg);
           }
           break;
         case 'captureSnapshot':
@@ -86,7 +88,8 @@ export function activate(context: vscode.ExtensionContext) {
               }
             });
           } catch (e) {
-            vscode.window.showErrorMessage('Failed to run CLI: ' + e.message);
+            const msg = (e instanceof Error) ? e.message : String(e);
+            vscode.window.showErrorMessage('Failed to run CLI: ' + msg);
           }
           break;
         case 'toggleArchive':
@@ -122,7 +125,8 @@ export function activate(context: vscode.ExtensionContext) {
               }
             });
           } catch (e) {
-            vscode.window.showErrorMessage('Failed to run CLI: ' + e.message);
+            const msg = (e instanceof Error) ? e.message : String(e);
+            vscode.window.showErrorMessage('Failed to run CLI: ' + msg);
           }
           break;
         case 'deleteSnapshot':
@@ -138,7 +142,8 @@ export function activate(context: vscode.ExtensionContext) {
               vscode.commands.executeCommand('sightline.openPanel'); // Refresh panel
             });
           } catch (e) {
-            vscode.window.showErrorMessage('Failed to run CLI: ' + e.message);
+            const msg = (e instanceof Error) ? e.message : String(e);
+            vscode.window.showErrorMessage('Failed to run CLI: ' + msg);
           }
           break;
       }
