@@ -32,8 +32,16 @@ async function initDatabase() {
       timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
       image BLOB,
       dom TEXT,
-      metadata TEXT
+      metadata TEXT,
+      label TEXT,
+      tags TEXT,
+      env_info TEXT,
+      archived INTEGER DEFAULT 0
     );
+
+    CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON snapshots(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_snapshots_label ON snapshots(label);
+    CREATE INDEX IF NOT EXISTS idx_snapshots_archived ON snapshots(archived);
 
     CREATE TABLE IF NOT EXISTS validations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,21 +92,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             url: { type: "string", description: "URL to capture" },
+            label: { type: "string", description: "Optional label for snapshot" },
+            tags: { type: "array", items: { type: "string" }, description: "Optional tags" },
+            env_info: { type: "object", description: "Optional environment info" },
           },
           required: ["url"],
         },
       },
       {
         name: "validate_snapshot",
-        description: "Validate a snapshot's DOM with simple checks",
+        description: "Validate a snapshot's DOM with simple or multiple checks",
         inputSchema: {
           type: "object",
           properties: {
             snapshot_id: { type: "number", description: "Snapshot ID" },
-            selector: { type: "string", description: "CSS selector to check" },
-            text: { type: "string", description: "Expected text content" },
+            rules: {
+              type: "array",
+              description: "Validation rules (selector + expected text)",
+              items: {
+                type: "object",
+                properties: {
+                  selector: { type: "string", description: "CSS selector" },
+                  text: { type: "string", description: "Expected text content" },
+                },
+                required: ["selector", "text"],
+              },
+            },
+            profile: { type: "string", description: "Validation profile name (optional)" },
           },
-          required: ["snapshot_id", "selector", "text"],
+          required: ["snapshot_id", "rules"],
         },
       },
       {
@@ -109,6 +131,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             snapshot_id_a: { type: "number", description: "First snapshot ID" },
             snapshot_id_b: { type: "number", description: "Second snapshot ID" },
+            threshold: { type: "number", description: "Pixelmatch threshold (optional)", minimum: 0, maximum: 1 },
           },
           required: ["snapshot_id_a", "snapshot_id_b"],
         },
@@ -127,6 +150,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (name) {
     case "take_snapshot": {
       const url = String(args.url);
+      const label = args.label ? String(args.label) : null;
+      const tags = args.tags ? JSON.stringify(args.tags) : null;
+      const env_info = args.env_info ? JSON.stringify(args.env_info) : null;
+
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
       await page.goto(url, { waitUntil: "networkidle2" });
@@ -137,10 +164,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       await browser.close();
 
       const result = await db.run(
-        "INSERT INTO snapshots (image, dom, metadata) VALUES (?, ?, ?)",
+        "INSERT INTO snapshots (image, dom, metadata, label, tags, env_info) VALUES (?, ?, ?, ?, ?, ?)",
         screenshotBuffer,
         dom,
-        JSON.stringify({ url })
+        JSON.stringify({ url }),
+        label,
+        tags,
+        env_info
       );
       const id = result.lastID;
 
@@ -156,8 +186,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     case "validate_snapshot": {
       const snapshot_id = Number(args.snapshot_id);
-      const selector = String(args.selector);
-      const expectedText = String(args.text);
+      const rules = Array.isArray(args.rules) ? args.rules : [];
+      const profile = args.profile ? String(args.profile) : null;
 
       const row = await db.get(
         "SELECT dom FROM snapshots WHERE id = ?",
@@ -166,25 +196,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!row) throw new Error("Snapshot not found");
 
       const dom = row.dom;
-      const found = dom.includes(selector) && dom.includes(expectedText);
+      const results = [];
 
-      const resultObj = {
-        selector,
-        expectedText,
-        found,
+      for (const rule of rules) {
+        const selector = String(rule.selector);
+        const expectedText = String(rule.text);
+        const found = dom.includes(selector) && dom.includes(expectedText);
+        results.push({ selector, expectedText, found });
+      }
+
+      const validationResult = {
+        profile,
+        rules: results,
       };
 
       await db.run(
         "INSERT INTO validations (snapshot_id, result) VALUES (?, ?)",
         snapshot_id,
-        JSON.stringify(resultObj)
+        JSON.stringify(validationResult)
       );
 
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(resultObj),
+            text: JSON.stringify(validationResult),
           },
         ],
       };
@@ -193,6 +229,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case "compare_snapshots": {
       const idA = Number(args.snapshot_id_a);
       const idB = Number(args.snapshot_id_b);
+      const threshold = args.threshold !== undefined ? Number(args.threshold) : 0.1;
 
       const rowA = await db.get(
         "SELECT image FROM snapshots WHERE id = ?",
@@ -216,7 +253,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         diff.data,
         width,
         height,
-        { threshold: 0.1 }
+        { threshold }
       );
 
       const diffBuffer = PNG.sync.write(diff);

@@ -1,23 +1,22 @@
 # Active Context: Sightline
 
 ## Current Phase
-**Transitioning from Phase 2 (MCP Server) to Phase 3 (Data management & Extension)**
+**Phase 3 (Data Management & Extension) — Completed**
 
 ## Focus Areas
-- MCP server fully implemented and moved inside main repo
-- Dependencies installed and TypeScript errors resolved
-- `.gitignore` files reviewed and updated
-- Memory Bank partially updated
-- Prepare for:
-  - SQLite data management improvements (Phase 3)
-  - VSCode extension UI scaffolding (Phase 4)
-  - Cline AI integration (Phase 5)
+- Enhanced SQLite schema with metadata, versioning labels, tags, environment info, soft-delete, and indexes
+- CLI utilities implemented: list, export/import, validate, diff, archive/delete
+- MCP tool APIs enhanced with optional parameters, multi-rule validation, diff threshold
+- Validation supports multiple selectors/rules and optional profiles
+- Preparing for:
+  - Phase 4: VSCode extension UI scaffolding
+  - Phase 5: Cline AI integration and prompt engineering
 
 ## Immediate Next Steps
-- Update Memory Bank docs with MCP server architecture and schemas
+- Update Memory Bank docs (in progress)
 - Commit and push unified repo to GitHub
-- Plan Phase 3 implementation details
 - Begin scaffolding VSCode extension
+- Plan Cline AI prompt engineering
 
 ## Known Issues / Questions
 - None outstanding
