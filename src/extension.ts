@@ -1,7 +1,45 @@
 import * as vscode from 'vscode';
 import { SightlinePanelProvider } from './sightlinePanelProvider';
+import * as cp from 'child_process';
+import * as path from 'path';
+
+let mcpProcess: cp.ChildProcess | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
+  // Start the MCP server as a subprocess
+  const mcpPath = path.join(context.extensionPath, '../mcp/sightline-server/build/index.js');
+  mcpProcess = cp.spawn('node', [mcpPath], {
+    cwd: path.dirname(mcpPath),
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  mcpProcess.stdout?.on('data', (data) => {
+    console.log(`[MCP stdout]: ${data.toString()}`);
+  });
+
+  mcpProcess.stderr?.on('data', (data) => {
+    console.error(`[MCP stderr]: ${data.toString()}`);
+  });
+
+  mcpProcess.on('error', (err) => {
+    console.error('Failed to start MCP server:', err);
+  });
+
+  mcpProcess.on('exit', (code) => {
+    console.log('MCP server exited with code', code);
+  });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('sightline.stopMCPServer', () => {
+      if (mcpProcess) {
+        mcpProcess.kill();
+        vscode.window.showInformationMessage('Sightline MCP server stopped.');
+      } else {
+        vscode.window.showWarningMessage('Sightline MCP server is not running.');
+      }
+    })
+  );
+
   // Create the sidebar provider instance first
   const sidebarProvider = new SightlinePanelProvider(context);
   
@@ -27,7 +65,6 @@ export function activate(context: vscode.ExtensionContext) {
       switch (message.type) {
         case 'approveAI':
           vscode.window.showInformationMessage(`Approved AI suggestion: ${message.suggestionId}`);
-          // Parse suggestionId format: e.g., "validate:123", "diff:123:100", "archive:99"
           const parts = message.suggestionId.split(':');
           const action = parts[0];
           if (action === 'validate') {
@@ -46,7 +83,6 @@ export function activate(context: vscode.ExtensionContext) {
           break;
         case 'denyAI':
           vscode.window.showInformationMessage(`Denied AI suggestion: ${message.suggestionId}`);
-          // Log denial, skip action
           break;
         case 'runValidation':
           try {
@@ -108,11 +144,15 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(disposable);
 
+  vscode.commands.registerCommand('sightline.refreshSnapshots', () => {
+    fetchAndSendSnapshots(sidebarProvider);
+    fetchAndSendAISuggestions(sidebarProvider);
+  });
+
   // Check MCP server connection on startup and show status
   checkMCPServerConnection().then(isConnected => {
     if (isConnected) {
       vscode.window.showInformationMessage('Sightline: Connected to MCP server');
-      // Fetch data after confirming connection
       setTimeout(() => {
         fetchAndSendSnapshots(sidebarProvider);
         fetchAndSendAISuggestions(sidebarProvider);
@@ -121,20 +161,19 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showWarningMessage('Sightline: MCP server not connected. Start the server to enable full functionality.');
     }
   });
-
-  vscode.commands.registerCommand('sightline.refreshSnapshots', () => {
-    fetchAndSendSnapshots(sidebarProvider);
-    fetchAndSendAISuggestions(sidebarProvider);
-  });
 }
 
-// Add a function to check MCP server connection
+export function deactivate() {
+  if (mcpProcess) {
+    mcpProcess.kill();
+  }
+}
+
 async function checkMCPServerConnection(): Promise<boolean> {
   try {
     const cp = require('child_process');
     const path = require('path');
     const cliPath = path.join(__dirname, '../../mcp/sightline-server/src/cli.js');
-    
     return new Promise<boolean>((resolve) => {
       cp.exec(`node "${cliPath}" list-snapshots --json`, (err: any) => {
         resolve(!err);
@@ -180,8 +219,6 @@ function fetchAndSendAISuggestions(provider: SightlinePanelProvider) {
     }
   });
 }
-
-export function deactivate() {}
 
 function getWebviewContent(): string {
   return `
