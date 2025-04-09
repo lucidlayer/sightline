@@ -1,0 +1,36 @@
+{
+  "name": "sightline-extension",
+  "displayName": "Sightline",
+  "description": "VSCode extension for Sightline visual regression testing",
+  "version": "0.1.0",
+  "publisher": "your-name-or-org",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:sightline.openPanel"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "sightline.openPanel",
+        "title": "Sightline: Open Panel"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/vscode": "^1.99.1",
+    "typescript": "^5.8.3"
+  }
+}

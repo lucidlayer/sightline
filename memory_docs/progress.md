@@ -1,35 +1,35 @@
-# Progress Log: Sightline
+# Progress: Sightline
 
----
+## Phase 1: Bootstrapping
+- Initialized repo, Memory Bank, `.clinerules`
+- Status: **Completed**
 
-## 2025-04-09
+## Phase 2: MCP Server Development
+- Implemented core MCP tools, SQLite schema, CLI utilities
+- Status: **Completed**
 
-### Completed
-- Initialized Git repository (user)
-- Created `.clinerules` with explicit tool policies
-- Created Memory Bank files:
-  - `projectbrief.md`
-  - `activeContext.md`
-  - `systemPatterns.md`
-  - `techContext.md`
+## Phase 3: Data Management & Extension
+- Enhanced schema, CLI, MCP APIs, validation
+- Status: **Completed**
 
-### Completed (continued)
-- Bootstrapped MCP server project
-- Installed all dependencies
-- Designed and created SQLite schema (snapshots, validations, diffs)
-- Implemented `take_snapshot`, `validate_snapshot`, `compare_snapshots` tools
-- Integrated Puppeteer, Pixelmatch, SQLite
-- Added error handling and input validation
-- Fixed all TypeScript errors and warnings
+## Phase 4: VSCode Extension
+- Scaffolded extension with Webview panel
+- Built UI components:
+  - Snapshot gallery with filtering
+  - Validation panel with multi-rule support
+  - Diff viewer with adjustable threshold
+  - Snapshot management (archive, unarchive, delete)
+- Integrated CLI commands for all actions
+- Added communication layer and error handling
+- Status: **Completed**
 
-### Next Steps
-- Update Memory Bank docs with MCP server architecture and schemas
-- Begin Phase 3: SQLite data management improvements
-- Develop VSCode extension UI (Phase 4)
-- Integrate Cline AI workflows (Phase 5)
-- Testing, validation, and documentation updates
-
----
+## Next Phase: Phase 5 - Cline AI Integration
+- Update prompts to enforce Sightline tool use
+- Refine `.clinerules` with project-specific policies
+- Embed constraint stuffing, confidence checks, memory checks
+- Test Cline's behavior for tool invocation and chaining
+- Status: **Upcoming**
 
 ## Notes
-Update this file regularly to reflect completed work, current focus, and upcoming tasks.
+- All critical features for Phases 1-4 are implemented and documented
+- Preparing to transition to Phase 5

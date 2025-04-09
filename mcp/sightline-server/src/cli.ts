@@ -22,10 +22,15 @@ program
 program
   .command("list-snapshots")
   .description("List all snapshots")
-  .action(async () => {
+  .option("--json", "Output raw JSON")
+  .action(async (options) => {
     const db = await openDb();
     const rows = await db.all("SELECT id, timestamp, label, tags, archived FROM snapshots");
-    console.table(rows);
+    if (options.json) {
+      console.log(JSON.stringify(rows, null, 2));
+    } else {
+      console.table(rows);
+    }
     await db.close();
   });
 
