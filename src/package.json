@@ -17,6 +17,10 @@
     "Other"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onCommand:sightline.openPanel",
+    "onView:sightlinePanel"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
