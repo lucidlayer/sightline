@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import { WebSocketServer } from "ws";
+import { randomUUID } from "crypto";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
@@ -82,7 +83,6 @@ const server = new Server(
     },
   }
 );
-
 
 /**
  * List available tools: take_snapshot, validate_snapshot, compare_snapshots.
@@ -286,8 +286,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
+const clients: Record<string, { res: any }> = {};
+
 /**
- * Initialize and start HTTP + WebSocket server.
+ * Initialize and start HTTP + WebSocket + SSE server.
  */
 async function main() {
   await initDatabase();
@@ -298,59 +300,67 @@ async function main() {
 
   const port = process.env.PORT || 3000;
 
-  // Basic SSE endpoint for /mcp-sse
+  // SSE endpoint
   app.get("/mcp-sse", (req, res) => {
+    const clientId = randomUUID();
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    // Send initial connected event
-    res.write(`event: connected\ndata: {}\n\n`);
+    clients[clientId] = { res };
 
-    // Keep connection alive with comments
+    // Send clientId to client
+    res.write(`event: client_id\ndata: ${JSON.stringify({ clientId })}\n\n`);
+
+    // Keep alive
     const keepAlive = setInterval(() => {
       res.write(": keep-alive\n\n");
     }, 15000);
 
     req.on("close", () => {
       clearInterval(keepAlive);
+      delete clients[clientId];
     });
   });
 
-  // Minimal JSON-RPC dispatcher
-  async function handleJsonRpcRequest(request: any) {
-    const { id, method, params } = request;
-    let result, error;
-
-    try {
-      if (method === "list_tools") {
-        // @ts-expect-error Suppress schema param type mismatch
-        result = await server.request(ListToolsRequestSchema, params);
-      } else if (method === "call_tool") {
-        // @ts-expect-error Suppress schema param type mismatch
-        result = await server.request(CallToolRequestSchema, params);
-      } else {
-        throw new Error(`Unsupported method: ${method}`);
-      }
-    } catch (err: any) {
-      error = { code: -32000, message: err.message || String(err) };
+  // POST endpoint for client requests
+  app.post("/mcp-message", async (req, res) => {
+    const { clientId, ...rpcRequest } = req.body;
+    const client = clients[clientId];
+    if (!client) {
+      res.status(400).json({ error: "Invalid clientId" });
+      return;
     }
 
-    return {
-      jsonrpc: "2.0",
-      id,
-      ...(error ? { error } : { result }),
-    };
-  }
-
-  // HTTP JSON-RPC endpoint
-  app.post("/jsonrpc", async (req, res) => {
     try {
-      const response = await handleJsonRpcRequest(req.body);
-      res.json(response);
+      let result, error;
+      try {
+        if (rpcRequest.method === "list_tools") {
+          // @ts-expect-error
+          result = await server.request(ListToolsRequestSchema, rpcRequest.params);
+        } else if (rpcRequest.method === "call_tool") {
+          // @ts-expect-error
+          result = await server.request(CallToolRequestSchema, rpcRequest.params);
+        } else {
+          throw new Error(`Unsupported method: ${rpcRequest.method}`);
+        }
+      } catch (err: any) {
+        error = { code: -32000, message: err.message || String(err) };
+      }
+
+      const response = {
+        jsonrpc: "2.0",
+        id: rpcRequest.id,
+        ...(error ? { error } : { result }),
+      };
+
+      // Send response as SSE event
+      client.res.write(`event: rpc_response\ndata: ${JSON.stringify(response)}\n\n`);
+
+      res.json({ status: "ok" });
     } catch (err: any) {
-      console.error("JSON-RPC HTTP error:", err);
+      console.error("Error handling /mcp-message:", err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -359,14 +369,34 @@ async function main() {
     console.log(`Sightline MCP server listening on port ${port}`);
   });
 
-  // WebSocket JSON-RPC
+  // WebSocket JSON-RPC (optional)
   const wss = new WebSocketServer({ server: serverInstance });
 
   wss.on("connection", (ws) => {
     ws.on("message", async (message) => {
       try {
         const request = JSON.parse(message.toString());
-        const response = await handleJsonRpcRequest(request);
+        let result, error;
+        try {
+          if (request.method === "list_tools") {
+            // @ts-expect-error
+            result = await server.request(ListToolsRequestSchema, request.params);
+          } else if (request.method === "call_tool") {
+            // @ts-expect-error
+            result = await server.request(CallToolRequestSchema, request.params);
+          } else {
+            throw new Error(`Unsupported method: ${request.method}`);
+          }
+        } catch (err: any) {
+          error = { code: -32000, message: err.message || String(err) };
+        }
+
+        const response = {
+          jsonrpc: "2.0",
+          id: request.id,
+          ...(error ? { error } : { result }),
+        };
+
         ws.send(JSON.stringify(response));
       } catch (err: any) {
         console.error("JSON-RPC WS error:", err);
