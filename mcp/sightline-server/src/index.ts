@@ -203,12 +203,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!row) throw new Error("Snapshot not found");
 
       const dom = row.dom;
+
+      // Use cheerio for DOM parsing
+      const cheerio = await import('cheerio');
+      const $ = cheerio.load(dom);
+
       const results = [];
 
       for (const rule of rules) {
         const selector = String(rule.selector);
         const expectedText = String(rule.text);
-        const found = dom.includes(selector) && dom.includes(expectedText);
+
+        const elements = $(selector);
+        let found = false;
+
+        elements.each((_: number, el: cheerio.Element) => {
+          const text = $(el).text();
+          if (text.includes(expectedText)) {
+            found = true;
+            return false; // break loop
+          }
+        });
+
         results.push({ selector, expectedText, found });
       }
 

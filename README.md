@@ -206,3 +206,54 @@ DEV:
     }
   }
 }
+
+
+
+
+
+
+
+
+
+Realistic Developer Prompts for Sightline
+1. Capture a snapshot
+"Cline, take a snapshot of https://example.com and label it 'Homepage v1' with tags 'regression' and 'baseline'."
+
+2. List all snapshots
+"Cline, show me all my Sightline snapshots."
+
+3. View a specific snapshot
+"Cline, show me the snapshot labeled 'Homepage v1'."
+
+4. Validate a snapshot
+"Cline, validate the 'Homepage v1' snapshot.
+
+Check that the header contains 'Welcome' and the login button says 'Sign in'."
+
+5. Capture a new snapshot after changes
+"Cline, take a new snapshot of https://example.com after my updates, label it 'Homepage v2', tags 'regression', 'update'."
+
+6. Compare the two snapshots
+"Cline, compare 'Homepage v1' with 'Homepage v2' and show me the visual differences."
+
+7. Archive the old snapshot
+"Cline, archive the snapshot labeled 'Homepage v1'."
+
+8. Delete the new snapshot
+"Cline, delete the snapshot labeled 'Homepage v2'."
+
+9. List AI suggestions
+"Cline, what AI suggestions do you have for my snapshots?"
+
+10. Approve an AI suggestion
+"Cline, approve the AI suggestion to validate the 'Homepage v2' snapshot."
+
+11. Deny an AI suggestion
+"Cline, deny the AI suggestion to archive the 'Homepage v1' snapshot."
+
+12. Show validation results
+"Cline, show me the validation results for 'Homepage v2'."
+
+13. Show diff details
+"Cline, show me the diff details between 'Homepage v1' and 'Homepage v2'."
+
