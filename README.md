@@ -200,8 +200,9 @@ DEV:
     "sightline": {
       "command": "node",
       "args": [
-        "c:/Dev/Projects/lucid-layer/sightline/mcp/sightline-server/build/index.js"
-      ]
+        "C:/Dev/Projects/sightline-mcp-server/sightline-mcp-server/dist/index.js"
+      ],
+      "autoApprove": []
     }
   }
 }
