@@ -18,13 +18,21 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.0",
+    "@types/body-parser": "^1.19.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/ws": "^8.18.1",
+    "body-parser": "^2.2.0",
     "commander": "^13.1.0",
+    "cors": "^2.8.5",
     "eslint": "^9.24.0",
+    "express": "^5.1.0",
     "pixelmatch": "^7.1.0",
     "prettier": "^3.5.3",
     "puppeteer": "^24.6.1",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/commander": "^2.12.0",

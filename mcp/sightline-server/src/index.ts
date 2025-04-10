@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
+import { WebSocketServer } from "ws";
+
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -282,12 +286,73 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 /**
- * Start the server after initializing the database.
+ * Initialize and start HTTP + WebSocket server.
  */
 async function main() {
   await initDatabase();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+
+  const app = express();
+  app.use(cors());
+  app.use(bodyParser.json({ limit: "50mb" }));
+
+  const port = process.env.PORT || 3000;
+
+  // Minimal JSON-RPC dispatcher
+  async function handleJsonRpcRequest(request: any) {
+    const { id, method, params } = request;
+    let result, error;
+
+    try {
+      if (method === "list_tools") {
+        // @ts-expect-error Suppress schema param type mismatch
+        result = await server.request(ListToolsRequestSchema, params);
+      } else if (method === "call_tool") {
+        // @ts-expect-error Suppress schema param type mismatch
+        result = await server.request(CallToolRequestSchema, params);
+      } else {
+        throw new Error(`Unsupported method: ${method}`);
+      }
+    } catch (err: any) {
+      error = { code: -32000, message: err.message || String(err) };
+    }
+
+    return {
+      jsonrpc: "2.0",
+      id,
+      ...(error ? { error } : { result }),
+    };
+  }
+
+  // HTTP JSON-RPC endpoint
+  app.post("/jsonrpc", async (req, res) => {
+    try {
+      const response = await handleJsonRpcRequest(req.body);
+      res.json(response);
+    } catch (err: any) {
+      console.error("JSON-RPC HTTP error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  const serverInstance = app.listen(port, () => {
+    console.log(`Sightline MCP server listening on port ${port}`);
+  });
+
+  // WebSocket JSON-RPC
+  const wss = new WebSocketServer({ server: serverInstance });
+
+  wss.on("connection", (ws) => {
+    ws.on("message", async (message) => {
+      try {
+        const request = JSON.parse(message.toString());
+        const response = await handleJsonRpcRequest(request);
+        ws.send(JSON.stringify(response));
+      } catch (err: any) {
+        console.error("JSON-RPC WS error:", err);
+        ws.send(JSON.stringify({ error: err.message }));
+      }
+    });
+  });
 }
 
 main().catch((err) => {
