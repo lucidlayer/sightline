@@ -297,6 +297,26 @@ async function main() {
 
   const port = process.env.PORT || 3000;
 
+  // Basic SSE endpoint for /mcp-sse
+  app.get("/mcp-sse", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    // Send initial connected event
+    res.write(`event: connected\ndata: {}\n\n`);
+
+    // Keep connection alive with comments
+    const keepAlive = setInterval(() => {
+      res.write(": keep-alive\n\n");
+    }, 15000);
+
+    req.on("close", () => {
+      clearInterval(keepAlive);
+    });
+  });
+
   // Minimal JSON-RPC dispatcher
   async function handleJsonRpcRequest(request: any) {
     const { id, method, params } = request;
