@@ -10,6 +10,8 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 import sqlite3 from "sqlite3";
@@ -281,9 +283,127 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
 
+    case "toggle_archive_snapshot": {
+      const { snapshot_id, archived } = args;
+      await db.run('UPDATE snapshots SET archived = ? WHERE id = ?', archived ? 1 : 0, snapshot_id);
+      return { content: [{ type: 'text', text: JSON.stringify({ success: true }) }] };
+    }
+
+    case "delete_snapshot": {
+      const { snapshot_id } = args;
+      await db.run('DELETE FROM snapshots WHERE id = ?', snapshot_id);
+      await db.run('DELETE FROM diffs WHERE snapshot_id_a = ? OR snapshot_id_b = ?', snapshot_id, snapshot_id);
+      await db.run('DELETE FROM validations WHERE snapshot_id = ?', snapshot_id);
+      return { content: [{ type: 'text', text: JSON.stringify({ success: true }) }] };
+    }
+
+    case "update_ai_suggestion": {
+      const { suggestion_id, action } = args;
+      await db.run('UPDATE ai_suggestions SET status = ? WHERE id = ?', action, suggestion_id);
+      return { content: [{ type: 'text', text: JSON.stringify({ success: true }) }] };
+    }
+
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
+});
+
+// MCP resource handlers
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  resources: [
+    {
+      uri: 'sightline://snapshots',
+      name: 'All Sightline Snapshots',
+      mimeType: 'application/json',
+    },
+    {
+      uriTemplate: 'sightline://snapshots/{id}',
+      name: 'Single Snapshot by ID',
+      mimeType: 'application/json',
+    },
+    {
+      uriTemplate: 'sightline://diffs/{idA}/{idB}',
+      name: 'Diff between two snapshots',
+      mimeType: 'application/json',
+    },
+    {
+      uri: 'sightline://ai-suggestions',
+      name: 'AI Suggestions',
+      mimeType: 'application/json',
+    }
+  ]
+}));
+
+server.setRequestHandler(ReadResourceRequestSchema, async (req) => {
+  const uri = req.params.uri;
+
+  if (uri === 'sightline://snapshots') {
+    const rows = await db.all('SELECT id, label, tags, timestamp, archived, env_info, image FROM snapshots');
+    const snapshots = rows.map(row => ({
+      id: row.id,
+      label: row.label,
+      tags: JSON.parse(row.tags || '[]'),
+      timestamp: row.timestamp,
+      archived: !!row.archived,
+      env_info: JSON.parse(row.env_info || '{}'),
+      thumbnail_base64: row.image ? Buffer.from(row.image).toString('base64') : null
+    }));
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(snapshots) }] };
+  }
+
+  const snapMatch = uri.match(/^sightline:\/\/snapshots\/(\d+)$/);
+  if (snapMatch) {
+    const id = Number(snapMatch[1]);
+    const row = await db.get('SELECT * FROM snapshots WHERE id = ?', id);
+    if (!row) throw new Error('Snapshot not found');
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          id: row.id,
+          label: row.label,
+          tags: JSON.parse(row.tags || '[]'),
+          timestamp: row.timestamp,
+          archived: !!row.archived,
+          env_info: JSON.parse(row.env_info || '{}'),
+          image_base64: Buffer.from(row.image).toString('base64'),
+          dom: row.dom
+        })
+      }]
+    };
+  }
+
+  const diffMatch = uri.match(/^sightline:\/\/diffs\/(\d+)\/(\d+)$/);
+  if (diffMatch) {
+    const idA = Number(diffMatch[1]);
+    const idB = Number(diffMatch[2]);
+    const diffRow = await db.get('SELECT * FROM diffs WHERE snapshot_id_a = ? AND snapshot_id_b = ?', idA, idB);
+    if (!diffRow) throw new Error('Diff not found');
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          score: diffRow.score,
+          diff_image_base64: Buffer.from(diffRow.diff_image).toString('base64')
+        })
+      }]
+    };
+  }
+
+  if (uri === 'sightline://ai-suggestions') {
+    const rows = await db.all('SELECT * FROM ai_suggestions');
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify(rows)
+      }]
+    };
+  }
+
+  throw new Error(`Unknown resource URI: ${uri}`);
 });
 
 const clients: Record<string, { res: any }> = {};
