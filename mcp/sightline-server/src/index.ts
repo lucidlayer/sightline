@@ -83,6 +83,7 @@ const server = new Server(
   }
 );
 
+
 /**
  * List available tools: take_snapshot, validate_snapshot, compare_snapshots.
  */
